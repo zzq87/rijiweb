@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}搜索: {{ keyword }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>搜索结果: "{{ keyword }}"</h1>
+</div>
+
+<div class="toolbar">
+    <form class="search-form" action="{{ url_for('diary.search') }}" method="GET">
+        <input type="text" name="q" value="{{ keyword }}" placeholder="搜索日记..." minlength="2" required>
+        <button type="submit" class="btn btn-sm">搜索</button>
+    </form>
+</div>
+
+{% if results %}
+<p class="search-info">共找到 {{ results|length }} 篇日记</p>
+<div class="diary-list">
+    {% for entry in results %}
+    <article class="diary-card">
+        <a href="{{ url_for('diary.view', entry_id=entry.id) }}" class="card-link">
+            <h2 class="card-title">{{ entry.title }}</h2>
+            <p class="card-snippet">{{ entry.snippet }}</p>
+            <div class="card-meta">
+                <span class="card-date">{{ entry.diary_date }}</span>
+            </div>
+        </a>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>没有找到与 "{{ keyword }}" 相关的日记。</p>
+    <a href="{{ url_for('diary.index') }}">返回日记列表</a>
+</div>
+{% endif %}
+{% endblock %}

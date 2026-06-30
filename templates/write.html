@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}写日记{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>写日记</h1>
+</div>
+<div class="diary-form">
+    <form method="POST" action="{{ url_for('diary.write') }}" id="diaryForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">保存日记</button>
+            <a href="{{ url_for('diary.index') }}" class="btn btn-secondary">取消</a>
+            <span class="auto-save-status" id="autoSaveStatus"></span>
+        </div>
+        <div class="form-group">
+            <label for="diary_date">日期</label>
+            <input type="date" id="diary_date" name="diary_date" value="{{ diary_date or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="title">标题</label>
+            <input type="text" id="title" name="title" autofocus maxlength="200"
+                   value="{{ title or '' }}" placeholder="今天发生了什么事？">
+        </div>
+        <div class="form-group">
+            <label for="content">内容</label>
+            <textarea id="content" name="content" rows="12"
+                      placeholder="记录今天的点点滴滴...">{{ content or '' }}</textarea>
+            <small class="char-count">字数: <span id="count">0</span></small>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+(function() {
+    var form = document.getElementById('diaryForm');
+    var titleEl = document.getElementById('title');
+    var contentEl = document.getElementById('content');
+    var dateEl = document.getElementById('diary_date');
+    var counter = document.getElementById('count');
+    var statusEl = document.getElementById('autoSaveStatus');
+    var entryId = null;
+    var dirty = false;
+    var saveTimer = null;
+    var saving = false;
+
+    function updateCount() {
+        counter.textContent = contentEl.value.length;
+    }
+
+    function showStatus(msg, cls) {
+        statusEl.textContent = msg;
+        statusEl.className = 'auto-save-status ' + cls;
+    }
+
+    function markDirty() {
+        dirty = true;
+        showStatus('', '');
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(doSave, 2000);
+    }
+
+    function doSave() {
+        if (saving) return;
+        var title = titleEl.value.trim();
+        var content = contentEl.value;
+        if (!title && !content) return;
+
+        saving = true;
+        showStatus('保存中...', 'saving');
+
+        var body = new URLSearchParams();
+        body.append('csrf_token', form.querySelector('input[name=csrf_token]').value);
+        body.append('title', title);
+        body.append('content', content);
+        body.append('diary_date', dateEl.value);
+        if (entryId) body.append('entry_id', entryId);
+
+        fetch('{{ url_for("diary.auto_save") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            saving = false;
+            if (data.ok) {
+                entryId = data.entry_id;
+                dirty = false;
+                var now = new Date();
+                var ts = now.getHours().toString().padStart(2,'0') + ':' +
+                         now.getMinutes().toString().padStart(2,'0') + ':' +
+                         now.getSeconds().toString().padStart(2,'0');
+                showStatus('已自动保存 ' + ts, 'saved');
+            } else {
+                showStatus('保存失败', 'error');
+            }
+        })
+        .catch(function() {
+            saving = false;
+            showStatus('保存失败', 'error');
+        });
+    }
+
+    form.addEventListener('submit', function(e) {
+        if (dirty || !entryId) {
+            e.preventDefault();
+            clearTimeout(saveTimer);
+            doSave();
+            setTimeout(function() {
+                if (entryId) {
+                    window.location.href = '{{ url_for("diary.view", entry_id=0) }}'.replace('0', entryId);
+                } else {
+                    form.submit();
+                }
+            }, 500);
+        } else if (entryId) {
+            e.preventDefault();
+            window.location.href = '{{ url_for("diary.view", entry_id=0) }}'.replace('0', entryId);
+        }
+    });
+
+    titleEl.addEventListener('input', markDirty);
+    contentEl.addEventListener('input', function() { updateCount(); markDirty(); });
+    dateEl.addEventListener('change', markDirty);
+    updateCount();
+})();
+</script>
+{% endblock %}

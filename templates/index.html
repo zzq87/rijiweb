@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}我的日记{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>我的日记</h1>
+    <div class="header-actions">
+        {% if view_mode == 'calendar' %}
+        <a href="{{ url_for('diary.index', view='list') }}" class="btn btn-sm btn-secondary">列表</a>
+        {% else %}
+        <a href="{{ url_for('diary.index', view='calendar') }}" class="btn btn-sm btn-secondary">日历</a>
+        {% endif %}
+        <a href="{{ url_for('diary.write') }}" class="btn btn-primary">写日记</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <form class="search-form" action="{{ url_for('diary.search') }}" method="GET">
+        <input type="text" name="q" placeholder="搜索日记..." minlength="2" required>
+        <button type="submit" class="btn btn-sm">搜索</button>
+    </form>
+</div>
+
+{% if view_mode == 'calendar' %}
+
+<div class="calendar">
+    <div class="cal-header">
+        <a href="{{ url_for('diary.index', year=calendar_data.prev_year, month=calendar_data.prev_month) }}" class="cal-nav">&lt;</a>
+        <span class="cal-title">{{ calendar_data.month_name }}</span>
+        <a href="{{ url_for('diary.index', year=calendar_data.next_year, month=calendar_data.next_month) }}" class="cal-nav">&gt;</a>
+    </div>
+    <div class="cal-weekdays">
+        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div class="cal-grid">
+        {% for week in calendar_data.weeks %}
+        <div class="cal-week">
+            {% for day in week %}
+            {% set dkey = day.isoformat() %}
+            {% set count = calendar_data.date_entries.get(dkey, 0) %}
+            {% set is_today = day == calendar_data.today %}
+            {% set is_selected = selected_date and day == selected_date %}
+            {% set is_other_month = day.month != calendar_data.month %}
+            <a href="{{ url_for('diary.index', year=calendar_data.year, month=calendar_data.month, date=dkey) }}"
+               class="cal-day
+                      {% if is_today %}cal-today{% endif %}
+                      {% if is_selected %}cal-selected{% endif %}
+                      {% if is_other_month %}cal-other{% endif %}
+                      {% if count > 0 %}cal-has-entry{% endif %}">
+                <span class="cal-day-num">{{ day.day }}</span>
+                {% if count > 0 %}
+                <span class="cal-dot">{{ '●' if count == 1 else '●' }}</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if day_entries %}
+<div class="day-entries">
+    <h3 class="day-entries-title">{{ selected_date.isoformat() }}</h3>
+    <div class="diary-list">
+        {% for eid, etitle, words in day_entries %}
+        <article class="diary-card">
+            <a href="{{ url_for('diary.view', entry_id=eid) }}" class="card-link">
+                <h2 class="card-title">{{ etitle }}</h2>
+                <div class="card-meta">
+                    <span>{{ words }} 字</span>
+                </div>
+            </a>
+        </article>
+        {% endfor %}
+    </div>
+</div>
+{% elif selected_date %}
+<div class="empty-state" style="padding: 20px;">
+    <p>这天还没有日记。</p>
+    <a href="{{ url_for('diary.write') }}?date={{ selected_date.isoformat() }}">写一篇</a>
+</div>
+{% elif not calendar_data.date_entries %}
+<div class="empty-state">
+    <p>本月还没有日记，<a href="{{ url_for('diary.write') }}">写一篇吧</a>。</p>
+</div>
+{% endif %}
+
+{% else %}
+
+{% if entries %}
+<div class="diary-list">
+    {% for entry in entries %}
+    <article class="diary-card">
+        <a href="{{ url_for('diary.view', entry_id=entry.id) }}" class="card-link">
+            <h2 class="card-title">{{ entry.title }}</h2>
+            <div class="card-meta">
+                <span class="card-date">{{ entry.diary_date }}</span>
+                <span class="card-words">{{ entry.word_count }} 字</span>
+            </div>
+        </a>
+    </article>
+    {% endfor %}
+</div>
+
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    {% if pagination.has_prev %}
+    <a href="{{ url_for('diary.index', view='list', page=pagination.prev_num) }}" class="btn btn-sm">&laquo; 上一页</a>
+    {% endif %}
+    <span class="page-info">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+    <a href="{{ url_for('diary.index', view='list', page=pagination.next_num) }}" class="btn btn-sm">下一页 &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>还没有日记，<a href="{{ url_for('diary.write') }}">写一篇吧</a>。</p>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

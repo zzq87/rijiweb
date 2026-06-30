@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ entry.title }}</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('diary.edit', entry_id=entry.id) }}" class="btn btn-primary">编辑</a>
+        <form method="POST" action="{{ url_for('diary.delete', entry_id=entry.id) }}"
+              class="inline-form" onsubmit="return confirm('确定要删除这篇日记吗？此操作不可恢复。');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-danger">删除</button>
+        </form>
+    </div>
+</div>
+
+<div class="entry-meta">
+    <span>日期: {{ entry.diary_date }}</span>
+    <span>创建于: {{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+    {% if entry.updated_at != entry.created_at %}
+    <span>更新于: {{ entry.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+    {% endif %}
+    <span>{{ entry.word_count }} 字</span>
+</div>
+
+<article class="entry-content">
+    {{ entry.content | replace('\n', '<br>') | safe }}
+</article>
+
+<div class="entry-footer">
+    <a href="{{ url_for('diary.index') }}" class="btn btn-secondary">返回列表</a>
+</div>
+{% endblock %}

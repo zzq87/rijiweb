@@ -1,0 +1,32 @@
+[Unit]
+Description=Riji Diary Web Application
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/rijiweb
+EnvironmentFile=/home/pi/rijiweb/.env
+ExecStart=/usr/bin/gunicorn --config gunicorn_config.py wsgi:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+StandardOutput=append:/var/log/rijiweb/access.log
+StandardError=append:/var/log/rijiweb/error.log
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/rijiweb/data /home/pi/rijiweb/backups
+ReadOnlyPaths=/home/pi/rijiweb
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+
+[Install]
+WantedBy=multi-user.target
